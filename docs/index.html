@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Генератор Отмазок 🎭</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #0f0f1a; --card: #1e1e2e; --border: #2d2d3d;
+    --purple: #a78bfa; --blue: #60a5fa; --green: #34d399;
+    --text: #e5e7eb; --muted: #6b7280;
+  }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; padding: 16px; padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px)); }
+  .header { text-align: center; padding: 20px 0 24px; }
+  h1 { font-size: clamp(1.6rem, 5vw, 2.2rem); background: linear-gradient(135deg, var(--purple), var(--blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 6px; }
+  .subtitle { color: var(--muted); font-size: 0.9rem; }
+  .mode-switch { display: flex; background: var(--card); border-radius: 12px; padding: 4px; margin-bottom: 20px; border: 1px solid var(--border); }
+  .mode-btn { flex: 1; padding: 10px; border: none; border-radius: 9px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--muted); touch-action: manipulation; }
+  .mode-btn.active { background: linear-gradient(135deg, var(--purple), var(--blue)); color: #fff; font-weight: 600; }
+  .free-mode, .ai-mode { display: none; }
+  .free-mode.visible, .ai-mode.visible { display: block; }
+  .situations { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .situation-btn { background: var(--card); border: 2px solid var(--border); border-radius: 12px; padding: 14px 12px; color: var(--text); cursor: pointer; font-size: 0.9rem; transition: all 0.2s; text-align: left; min-height: 70px; display: flex; flex-direction: column; gap: 6px; touch-action: manipulation; }
+  .situation-btn:active { transform: scale(0.97); }
+  .situation-btn.active { border-color: var(--purple); background: #2d1f4e; }
+  .situation-btn .emoji { font-size: 1.4rem; }
+  .ai-form { margin-bottom: 16px; }
+  .ai-label { display: block; color: var(--muted); font-size: 0.85rem; margin-bottom: 8px; }
+  .ai-textarea { width: 100%; background: var(--card); border: 2px solid var(--border); border-radius: 12px; padding: 14px; color: var(--text); font-size: 1rem; font-family: inherit; resize: none; min-height: 100px; outline: none; transition: border-color 0.2s; touch-action: manipulation; }
+  .ai-textarea:focus { border-color: var(--purple); }
+  .ai-textarea::placeholder { color: var(--muted); }
+  .ai-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #7c3aed33, #2563eb33); border: 1px solid #7c3aed55; border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; color: var(--purple); margin-bottom: 12px; }
+  .btn-generate { width: 100%; background: linear-gradient(135deg, var(--purple), var(--blue)); border: none; border-radius: 12px; padding: 14px; color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; margin-top: 12px; touch-action: manipulation; }
+  .btn-generate:active { opacity: 0.85; }
+  .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+  .result-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; display: none; animation: fadeIn 0.3s ease; margin-top: 16px; }
+  .result-card.visible { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .ai-tag { display: inline-flex; align-items: center; gap: 4px; background: #7c3aed22; border: 1px solid #7c3aed44; border-radius: 20px; padding: 3px 10px; font-size: 0.85rem; color: var(--purple); margin-bottom: 12px; }
+  .excuse-text { font-size: 1rem; line-height: 1.7; color: var(--text); margin-bottom: 18px; }
+  .rating-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .rating-label { color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
+  .rating-bar { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .rating-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--purple), var(--blue)); transition: width 0.5s ease; }
+  .rating-score { font-size: 1rem; font-weight: 700; color: var(--purple); min-width: 44px; text-align: right; }
+  .rating-reason { font-size: 0.85rem; color: var(--muted); margin-bottom: 16px; font-style: italic; padding: 8px 12px; background: #ffffff08; border-radius: 8px; display: none; }
+  .rating-reason.visible { display: block; }
+  .action-buttons { display: flex; flex-direction: column; gap: 10px; }
+  .btn-copy { width: 100%; background: linear-gradient(135deg, var(--purple), var(--blue)); border: none; border-radius: 12px; padding: 14px; color: #fff; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; touch-action: manipulation; }
+  .btn-copy:active { opacity: 0.85; }
+  .btn-regen { width: 100%; background: var(--border); border: none; border-radius: 12px; padding: 12px; color: var(--text); font-size: 0.9rem; cursor: pointer; transition: background 0.2s; touch-action: manipulation; }
+  .btn-regen:active { background: #3d3d4d; }
+  .copied-msg { text-align: center; color: var(--green); font-size: 0.85rem; margin-top: 10px; min-height: 20px; }
+  .hint { text-align: center; color: #374151; font-size: 0.85rem; margin-top: 16px; }
+  @media (min-width: 480px) { body { padding: 20px; } .action-buttons { flex-direction: row; } .btn-copy { flex: 2; } .btn-regen { flex: 1; } }
+  @media (min-width: 768px) { body { max-width: 600px; margin: 0 auto; padding: 40px 20px; } .situations { grid-template-columns: repeat(3, 1fr); } }
+
+  /* Loading screen */
+  #loadingScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f0f1a; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 20px; transition: opacity 0.5s ease; }
+  #loadingScreen.hidden { opacity: 0; pointer-events: none; }
+  .load-spinner { width: 48px; height: 48px; border: 4px solid #2d2d3d; border-top-color: #a78bfa; border-radius: 50%; animation: spin2 0.8s linear infinite; }
+  @keyframes spin2 { to { transform: rotate(360deg); } }
+  .load-title { font-size: 1.5rem; background: linear-gradient(135deg, #a78bfa, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 700; }
+  .load-text { color: #6b7280; font-size: 0.9rem; text-align: center; padding: 0 20px; line-height: 1.6; }
+  .load-progress { width: 200px; height: 4px; background: #2d2d3d; border-radius: 2px; overflow: hidden; }
+  .load-progress-fill { height: 100%; background: linear-gradient(90deg, #a78bfa, #60a5fa); border-radius: 2px; width: 0%; transition: width 0.3s ease; }
+  #mainContent { opacity: 0; transition: opacity 0.5s ease; }
+  #mainContent.visible { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="loadingScreen">
+  <div class="load-spinner"></div>
+  <div class="load-title">Генератор Отмазок 🎭</div>
+  <div class="load-text" id="loadText">Запускаем сервис, подождите...</div>
+  <div class="load-progress"><div class="load-progress-fill" id="loadProgress"></div></div>
+</div>
+
+<div id="mainContent">
+<div class="header">
+  <h1>Генератор Отмазок 🎭</h1>
+  <p class="subtitle">Убедительные отмазки для любой ситуации 😅</p>
+</div>
+
+<div class="mode-switch">
+  <button class="mode-btn active" onclick="setMode('free')">🆓 Быстрые отмазки</button>
+  <button class="mode-btn" onclick="setMode('ai')">✨ AI-генерация</button>
+</div>
+
+<div class="free-mode visible" id="freeMode">
+  <div class="situations">
+    <button class="situation-btn" onclick="selectSituation('late', this)"><span class="emoji">⏰</span>Опоздал на работу</button>
+    <button class="situation-btn" onclick="selectSituation('homework', this)"><span class="emoji">📚</span>Не сделал домашку</button>
+    <button class="situation-btn" onclick="selectSituation('birthday', this)"><span class="emoji">🎂</span>Забыл день рождения</button>
+    <button class="situation-btn" onclick="selectSituation('message', this)"><span class="emoji">💬</span>Не ответил на сообщение</button>
+    <button class="situation-btn" onclick="selectSituation('meeting', this)"><span class="emoji">📅</span>Пропустил встречу</button>
+    <button class="situation-btn" onclick="selectSituation('report', this)"><span class="emoji">📊</span>Не сдал отчёт</button>
+  </div>
+  <div class="result-card" id="freeResult">
+    <div class="excuse-text" id="freeExcuseText"></div>
+    <div class="rating-row">
+      <span class="rating-label">Правдоподобность</span>
+      <div class="rating-bar"><div class="rating-fill" id="freeRatingFill"></div></div>
+      <span class="rating-score" id="freeRatingScore"></span>
+    </div>
+    <div class="rating-reason" id="freeRatingReason"></div>
+    <div class="action-buttons">
+      <button class="btn-copy" onclick="copyText('freeExcuseText', 'freeCopied')">📋 Скопировать и отправить боссу</button>
+      <button class="btn-regen" onclick="regenFree()">🔄 Другая</button>
+    </div>
+    <div class="copied-msg" id="freeCopied"></div>
+  </div>
+  <p class="hint" id="freeHint">👆 Выбери ситуацию</p>
+</div>
+
+<div class="ai-mode" id="aiMode">
+  <div class="ai-badge">✨ Powered by Claude AI</div>
+  <div class="ai-form">
+    <label class="ai-label">Опиши свою ситуацию:</label>
+    <textarea class="ai-textarea" id="aiInput" placeholder="Например: я не успел сдать проект потому что..." maxlength="500"></textarea>
+  </div>
+  <button class="btn-generate" onclick="generateAI()" id="generateBtn">✨ Сгенерировать отмазку</button>
+  <div class="result-card" id="aiResult">
+    <div class="ai-tag">✨ Сгенерировано AI</div>
+    <div class="excuse-text" id="aiExcuseText"></div>
+    <div class="rating-row">
+      <span class="rating-label">Правдоподобность</span>
+      <div class="rating-bar"><div class="rating-fill" id="aiRatingFill"></div></div>
+      <span class="rating-score" id="aiRatingScore"></span>
+    </div>
+    <div class="rating-reason visible" id="aiRatingReason"></div>
+    <div class="action-buttons">
+      <button class="btn-copy" onclick="copyText('aiExcuseText', 'aiCopied')">📋 Скопировать и отправить боссу</button>
+      <button class="btn-regen" onclick="generateAI()">🔄 Перегенерировать</button>
+    </div>
+    <div class="copied-msg" id="aiCopied"></div>
+  </div>
+</div>
+</div><!-- /mainContent -->
+
+<script>
+const API_BASE = 'https://excuse-generator-ivge.onrender.com';
+
+// Будим Render сразу при загрузке страницы
+async function wakeUpServer() {
+  const progress = document.getElementById('loadProgress');
+  const loadText = document.getElementById('loadText');
+  
+  // Анимируем прогресс до 80% пока ждём
+  let pct = 0;
+  const timer = setInterval(() => {
+    pct = Math.min(pct + 2, 80);
+    progress.style.width = pct + '%';
+  }, 400);
+
+  try {
+    loadText.textContent = 'Запускаем сервис, подождите...';
+    await fetch(API_BASE + '/', { mode: 'no-cors' });
+  } catch(e) {
+    // no-cors всегда кидает ошибку, это нормально — главное что запрос ушёл
+  }
+
+  // Ждём ещё немного чтобы сервер точно проснулся
+  await new Promise(r => setTimeout(r, 3000));
+
+  clearInterval(timer);
+  progress.style.width = '100%';
+  loadText.textContent = 'Готово! Загружаем...';
+
+  await new Promise(r => setTimeout(r, 400));
+
+  // Скрываем загрузку, показываем контент
+  const loading = document.getElementById('loadingScreen');
+  const content = document.getElementById('mainContent');
+  loading.classList.add('hidden');
+  content.classList.add('visible');
+  setTimeout(() => loading.style.display = 'none', 500);
+}
+
+wakeUpServer();
+
+// ---- Логика приложения ----
+
+const EXCUSES = {
+  late: [
+    {text: "У меня с утра не завелась машина — аккумулятор сдох прямо во дворе. Пришлось искать прикуриватель у соседей, а потом стоять в пробке из-за аварии на Садовом.", rating: null},
+    {text: "Мне ночью написал клиент с горящим вопросом, я отвечал до 3 ночи. Утром просто не услышал будильник. Такое бывает когда работаешь на результат.", rating: null},
+    {text: "В нашем районе с утра отключили свет — я не мог ни такси вызвать, ни посмотреть расписание. Пришлось добираться с пересадками.", rating: null},
+  ],
+  homework: [
+    {text: "Я начал делать задание, но в условии есть неточность — потратил два часа пытаясь разобраться. Решил переспросить чтобы не сделать неправильно.", rating: null},
+    {text: "У меня вчера резко заболел младший брат — 39 температура, родители на работе. Весь вечер с ним просидел, скорую вызывал.", rating: null},
+    {text: "Я сделал, но файл не сохранился — комп завис и всё слетело. Начал заново но не успел до конца.", rating: null},
+  ],
+  birthday: [
+    {text: "Я помнил! Просто решил поздравить чуть позже — когда все уже забудут, ты получишь неожиданный привет. Это называется отложенный сюрприз.", rating: null},
+    {text: "У меня телефон слетел и все напоминания сбросились. Потерял вообще все даты — три человека в этом месяце именинники, всех пропустил.", rating: null},
+    {text: "Я специально ждал чтобы поздравить лично и вдумчиво. Массовые поздравления в день рождения — это шаблон. Моё — искреннее.", rating: null},
+  ],
+  message: [
+    {text: "Я увидел сообщение в неудобный момент, хотел ответить нормально а не второпях — и забыл вернуться. Это не игнор, это уважение.", rating: null},
+    {text: "Телефон лежал на беззвучном весь день — было важное мероприятие. Увидел только сейчас. Что случилось?", rating: null},
+    {text: "У меня в мессенджере глюк — сообщение показало как прочитанное но уведомление не пришло. Только сейчас случайно увидел.", rating: null},
+  ],
+  meeting: [
+    {text: "У меня в календаре встреча стояла на час позже — видимо когда переносили время обновили invite только у себя. Я ждал в 15:00, думал встреча отменилась.", rating: null},
+    {text: "Был в зоне без связи — ездил в область по делам. Вернулся — увидел пропущенные. Готов провести встречу сегодня или завтра.", rating: null},
+    {text: "У меня параллельно была критическая ситуация с другим проектом — нужно было срочно принять решение. Давай перенесём.", rating: null},
+  ],
+  report: [
+    {text: "Я хотел сдать качественный отчёт — нашёл расхождения в данных и начал перепроверять. Лучше задержать на день чем сдать с ошибками.", rating: null},
+    {text: "Мне не хватало данных от смежного отдела — запрашивал три раза. Как только получу — сразу закрою. Это не от меня зависит.", rating: null},
+    {text: "Сервер лёг в самый ответственный момент — я уже почти закончил, и тут всё зависло. Как только поднимут — сразу отправлю.", rating: null},
+  ],
+};
+
+function calcRating(text) {
+  let score = 7.0;
+  if (text.length > 200) score += 1.2;
+  else if (text.length > 150) score += 0.7;
+  else if (text.length < 80) score -= 0.8;
+  if (/\d+/.test(text)) score += 0.8;
+  if (/район|улиц|метро|офис|дорог|пробк/i.test(text)) score += 0.5;
+  if (/утром|вечером|ночью|вчера|сегодня|\d+ час/i.test(text)) score += 0.4;
+  if (/срочно|критич|горящ|форс-мажор|скорую/i.test(text)) score += 0.6;
+  if (/готов|перенесём|сразу|исправл/i.test(text)) score += 0.5;
+  score = Math.max(7.0, Math.min(9.8, score));
+  return Math.round(score * 10) / 10;
+}
+
+function getRatingReason(score) {
+  if (score >= 9.0) return "Очень убедительно — конкретные детали, эмоции и предложение решения.";
+  if (score >= 8.5) return "Звучит очень правдоподобно — сложно усомниться.";
+  if (score >= 8.0) return "Хорошо — достаточно деталей чтобы поверить.";
+  return "Неплохо, но можно добавить больше конкретики.";
+}
+
+let currentSituation = null;
+let currentIndex = 0;
+
+function setMode(mode) {
+  document.querySelectorAll('.mode-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', (i === 0 && mode === 'free') || (i === 1 && mode === 'ai'));
+  });
+  document.getElementById('freeMode').classList.toggle('visible', mode === 'free');
+  document.getElementById('aiMode').classList.toggle('visible', mode === 'ai');
+}
+
+function selectSituation(situation, btn) {
+  document.querySelectorAll('.situation-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentSituation = situation;
+  currentIndex = 0;
+  showFreeExcuse();
+  document.getElementById('freeHint').style.display = 'none';
+}
+
+function regenFree() {
+  if (!currentSituation) return;
+  currentIndex = (currentIndex + 1) % EXCUSES[currentSituation].length;
+  showFreeExcuse();
+}
+
+function showFreeExcuse() {
+  const excuse = EXCUSES[currentSituation][currentIndex];
+  const rating = calcRating(excuse.text);
+  const reason = getRatingReason(rating);
+  showResult('free', excuse.text, rating, reason);
+}
+
+async function generateAI() {
+  const text = document.getElementById('aiInput').value.trim();
+  if (!text) { document.getElementById('aiInput').focus(); return; }
+
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Генерирую...';
+  document.getElementById('aiResult').classList.remove('visible');
+
+  try {
+    const res = await fetch(API_BASE + '/api/excuse/ai', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({situation_text: text})
+    });
+    const data = await res.json();
+    showResult('ai', data.text, data.rating, data.reason);
+  } catch(e) {
+    showResult('ai', "Ситуация вышла из-под контроля по независящим от меня причинам. Готов всё объяснить лично.", 6.5, "Сервис временно недоступен");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ Сгенерировать отмазку';
+  }
+}
+
+function showResult(mode, text, rating, reason) {
+  const card = document.getElementById(mode + 'Result');
+  document.getElementById(mode + 'ExcuseText').textContent = text;
+  document.getElementById(mode + 'RatingScore').textContent = rating + '/10';
+  document.getElementById(mode + 'RatingFill').style.width = (rating * 10) + '%';
+  document.getElementById(mode + 'Copied').textContent = '';
+
+  const reasonEl = document.getElementById(mode + 'RatingReason');
+  if (reason) {
+    reasonEl.textContent = '💡 ' + reason;
+    reasonEl.classList.add('visible');
+  } else {
+    reasonEl.classList.remove('visible');
+  }
+
+  card.classList.remove('visible');
+  setTimeout(() => card.classList.add('visible'), 10);
+}
+
+async function copyText(textId, msgId) {
+  const text = document.getElementById(textId).textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    const msg = document.getElementById(msgId);
+    msg.textContent = '✅ Скопировано! Удачи с боссом 😅';
+    setTimeout(() => msg.textContent = '', 3000);
+  } catch(e) { console.error(e); }
+}
+</script>
+
+</body>
+</html>
