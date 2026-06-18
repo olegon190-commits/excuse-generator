@@ -1,9 +1,11 @@
 from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
 import os
 import json
 import re
 
 app = Flask(__name__)
+CORS(app)
 
 EXCUSES = {
     "late": [
@@ -97,7 +99,6 @@ def get_ai_excuse():
             )
 
             response_text = message.content[0].text.strip()
-            # Убираем markdown если есть
             response_text = re.sub(r'```json\s*|\s*```', '', response_text).strip()
             result = json.loads(response_text)
 
@@ -109,7 +110,6 @@ def get_ai_excuse():
             })
 
         except Exception as e:
-            # Fallback если API не сработал
             return jsonify({
                 "text": "Ситуация вышла из-под контроля по независящим от меня причинам. Готов объяснить всё лично при встрече.",
                 "rating": 6.5,
@@ -117,7 +117,6 @@ def get_ai_excuse():
                 "mode": "fallback"
             })
     else:
-        # Заглушка без API ключа
         return jsonify({
             "text": "Понимаю что это звучит неправдоподобно, но именно так всё и произошло. У меня есть подтверждение если нужно.",
             "rating": 7.2,
